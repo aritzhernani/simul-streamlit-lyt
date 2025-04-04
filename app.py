@@ -1,0 +1,430 @@
+# Importación de librerías
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
+
+# Configuración de la aplicación
+st.set_page_config(page_title='Simulación', layout='centered', initial_sidebar_state='collapsed')
+
+# Título de la aplicación
+st.title('')
+st.markdown('')
+st.write('')
+
+tab1, tab2, tab3 = st.tabs(["Definición de arquetipos", "Cálculo de porcentajes", "Análisis de beneficios"])#, "Simulación de escenarios"])
+
+##### Definición de arquetipos
+with tab1:
+    st.sidebar.title('Arquetipos')
+    st.sidebar.markdown('## Definición de arquetipos')
+    # st.write('En esta sección detallamos y elegimos los gastos mensuales categorizados para cada arquetipo.')
+
+    # Valores generales de las categorías
+    CATEGORIAS_RANGO = {
+        "Vivienda, agua, electricidad, gas": (0, 2000),
+        "Alimentación y bebidas no alcohólicas": (0, 1000),
+        "Transporte (público, gasolina, coche)": (0, 500),
+        "Restaurantes, ocio y cultura": (0, 500),
+        "Sanidad (farmacia, seguros médicos)": (0, 500),
+        "Ropa y calzado": (0, 500),
+        "Educación (colegios, actividades)": (0, 1000),
+        "Deporte y bienestar (gimnasio, clubs)": (0, 300),
+        "Tecnología y telecomunicaciones": (0, 300),
+        "Otros bienes y servicios": (0, 300)
+    }
+
+    # Valores mínimos y máximos por arquetipo
+    ARQUETIPOS_ORIGINALES = {
+        "Usuario casual (joven adulto)": {
+            "Vivienda, agua, electricidad, gas": (550, 700),
+            "Alimentación y bebidas no alcohólicas": (150, 250),
+            "Transporte (público, gasolina, coche)": (35, 40),
+            "Restaurantes, ocio y cultura": (100, 150),
+            "Sanidad (farmacia, seguros médicos)": (0, 30),
+            "Ropa y calzado": (10, 50),
+            "Educación (colegios, actividades)": (0, 0),
+            "Deporte y bienestar (gimnasio, clubs)": (25, 60),
+            "Tecnología y telecomunicaciones": (10, 30),
+            "Otros bienes y servicios": (20, 80)
+        },
+        "Adulto profesional soltero": {
+            "Vivienda, agua, electricidad, gas": (600, 800),
+            "Alimentación y bebidas no alcohólicas": (200, 300),
+            "Transporte (público, gasolina, coche)": (40, 50),
+            "Restaurantes, ocio y cultura": (150, 200),
+            "Sanidad (farmacia, seguros médicos)": (20, 50),
+            "Ropa y calzado": (50, 100),
+            "Educación (colegios, actividades)": (0, 0),
+            "Deporte y bienestar (gimnasio, clubs)": (30, 60),
+            "Tecnología y telecomunicaciones": (20, 40),
+            "Otros bienes y servicios": (50, 100)
+        },
+        "Familia de clase media con dos hijos": {
+            "Vivienda, agua, electricidad, gas": (800, 1000),
+            "Alimentación y bebidas no alcohólicas": (500, 700),
+            "Transporte (público, gasolina, coche)": (100, 150),
+            "Restaurantes, ocio y cultura": (150, 250),
+            "Sanidad (farmacia, seguros médicos)": (50, 100),
+            "Ropa y calzado": (100, 200),
+            "Educación (colegios, actividades)": (300, 400),
+            "Deporte y bienestar (gimnasio, clubs)": (50, 100),
+            "Tecnología y telecomunicaciones": (30, 60),
+            "Otros bienes y servicios": (50, 150)
+        },
+        "Pareja de jubilados": {
+            "Vivienda, agua, electricidad, gas": (600, 800),
+            "Alimentación y bebidas no alcohólicas": (300, 400),
+            "Transporte (público, gasolina, coche)": (30, 50),
+            "Restaurantes, ocio y cultura": (100, 150),
+            "Sanidad (farmacia, seguros médicos)": (40, 80),
+            "Ropa y calzado": (20, 50),
+            "Educación (colegios, actividades)": (0, 0),
+            "Deporte y bienestar (gimnasio, clubs)": (25, 50),
+            "Tecnología y telecomunicaciones": (20, 40),
+            "Otros bienes y servicios": (50, 150)
+        }
+    }
+
+    # Inicializar session_state
+    if "arquetipo_seleccionado" not in st.session_state:
+        st.session_state.arquetipo_seleccionado = None
+
+    if "valores_modificados" not in st.session_state:
+        st.session_state.valores_modificados = {}
+
+    if "valores_actuales" not in st.session_state:
+        st.session_state.valores_actuales = {}
+
+    # Función para obtener valores (modificados o originales)
+    def obtener_valores(arquetipo):
+        if arquetipo in st.session_state.valores_modificados:
+            return st.session_state.valores_modificados[arquetipo]
+        return ARQUETIPOS_ORIGINALES[arquetipo].copy()
+
+
+    ###########
+    cols = st.columns(4)
+    for idx, arquetipo in enumerate(ARQUETIPOS_ORIGINALES.keys()):
+        with cols[idx % 4]:
+            if st.button(arquetipo, key=f"btn_{idx}"):
+                st.session_state.arquetipo_seleccionado = arquetipo
+                st.session_state.valores_actuales = obtener_valores(arquetipo)
+                st.rerun()
+
+    # Mostrar controles si hay arquetipo seleccionado
+    arquetipo = st.session_state.arquetipo_seleccionado
+    #st.write(f"Arquetipo seleccionado: **{arquetipo}**")
+    
+    # Sliders con valores actuales
+    nuevos_valores = {}
+    for categoria, (min_val, max_val) in CATEGORIAS_RANGO.items():
+        valor_actual = st.session_state.valores_actuales.get(categoria, (min_val, max_val))
+        
+        # Asegurar que es una tupla
+        if isinstance(valor_actual, int):
+            valor_actual = (valor_actual, valor_actual)
+        
+        nuevos_valores[categoria] = st.slider(
+            f"{categoria}",
+            min_value=min_val,
+            max_value=max_val,
+            value=valor_actual,
+            key=f"slider_{arquetipo}_{categoria}"
+        )
+
+    st.session_state.valores_actuales = nuevos_valores
+
+    # Botones de acción
+    if st.button("Guardar cambios"):
+        st.session_state.valores_modificados[arquetipo] = nuevos_valores
+        st.info("Cambios guardados para este arquetipo!")
+
+    if st.button("Restablecer original"):
+        st.session_state.valores_actuales = ARQUETIPOS_ORIGINALES[arquetipo].copy()
+        if arquetipo in st.session_state.valores_modificados:
+            del st.session_state.valores_modificados[arquetipo]
+        st.rerun()
+
+#### Cálculo de porcentajes
+with tab2:
+    with st.expander("Distribución de porcentajes"):
+
+        def recalculate_weights(changed_weight, other_weight1, other_weight2):
+            total = changed_weight + other_weight1 + other_weight2
+            if total != 0:
+                scale = 1 / total
+                return changed_weight * scale, other_weight1 * scale, other_weight2 * scale
+            return changed_weight, other_weight1, other_weight2
+
+        col1, col2, col3 = st.columns(3)
+
+        if 'entidad_weight' not in st.session_state:
+            st.session_state['entidad_weight'] = 1/3
+        if 'user_weight' not in st.session_state:
+            st.session_state['user_weight'] = 1/3
+        if 'proveedores_weight' not in st.session_state:
+            st.session_state['proveedores_weight'] = 1/3
+
+        with col1:
+            entidad_weight = st.slider("Entidad", 0.0, 1.0, st.session_state['entidad_weight'], step=0.01)
+        with col2:
+            user_weight = st.slider("Usuario", 0.0, 1.0, st.session_state['user_weight'], step=0.01)
+        with col3:
+            proveedores_weight = st.slider("Proveedores", 0.0, 1.0, st.session_state['proveedores_weight'], step=0.01)
+
+        total_weight = entidad_weight + user_weight + proveedores_weight
+
+        # Add a button for forcing the recalculation
+        if total_weight != 1:
+            if st.button("Recalcular"):
+                # Recalculate weights
+                entidad_weight, user_weight, proveedores_weight = recalculate_weights(entidad_weight, user_weight, proveedores_weight)
+                st.session_state['entidad_weight'] = entidad_weight
+                st.session_state['user_weight'] = user_weight
+                st.session_state['proveedores_weight'] = proveedores_weight
+
+        # Add a button for resetting to default values: 1/3, 1/3, 1/3
+        if st.button("Restablecer valores por defecto"):
+            # Reset to default values
+            st.session_state['entidad_weight'] = 1/3
+            st.session_state['user_weight'] = 1/3
+            st.session_state['proveedores_weight'] = 1/3
+
+
+
+    # Expander para editar las comisiones por categoría
+    with st.expander("Editar porcentaje base por categoría"):
+        categorias = [
+            "Vivienda, agua, electricidad, gas",
+            "Alimentación y bebidas no alcohólicas",
+            "Transporte (público, gasolina, coche)",
+            "Restaurantes, ocio y cultura",
+            "Sanidad (farmacia, seguros médicos)",
+            "Ropa y calzado",
+            "Educación (colegios, actividades)",
+            "Deporte y bienestar (gimnasio, clubs)",
+            "Tecnología y telecomunicaciones",
+            "Otros bienes y servicios",
+            "Abono (deportivo)",
+            "Merchandising y compras esporádicas"
+        ]
+
+        base_df = pd.DataFrame({
+            "Categoría": categorias,
+            "Porc. base (%)": [1.5] * len(categorias)
+        })
+
+        num_columns = 2
+        columns = st.columns(num_columns)
+
+        for index, row in base_df.iterrows():
+            col = columns[index % num_columns]
+            with col:
+                base_df.at[index, "Porc. base (%)"] = st.number_input(
+                    f"{row['Categoría']}",
+                    min_value=0.0,
+                    max_value=5.0,
+                    value=row["Porc. base (%)"],
+                    step=0.1,
+                    format="%.2f",
+                    key=f"input_{index}"
+                )
+
+        # Calcula el porcentaje avg
+        base_df["Porc. avg (%)"] = base_df["Porc. base (%)"].mean()
+        st.markdown(f"""
+        <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+        <p style="margin:0;font-size:14px;">ℹ️ El porcentaje base por categoría es el promedio de los porcentajes
+        de cada categoría: <strong>{base_df["Porc. base (%)"].mean():.2f}%</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Pintame una barra horizontal stacked con la distribución de los porcentajes de: entidad, usuario y proveedores.
+
+
+#### Análisis de beneficios
+with tab3:
+    st.subheader("Distribución de población por arquetipos")
+    
+    # Create columns
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        arquetipos_ciudad = {
+            "Usuario casual (joven adulto)": st.number_input("Usuario casual (18-30 años)", min_value=0, max_value=100000, value=30000),
+            "Adulto profesional soltero": st.number_input("Adulto profesional soltero", min_value=0, max_value=100000, value=70151)
+        }
+    
+    with col2:
+        arquetipos_ciudad.update({
+            "Familia de clase media con dos hijos": st.number_input("Familia (padres + niños)", min_value=0, max_value=100000, value=22800),
+            "Pareja de jubilados": st.number_input("Pareja de jubilados (65+)", min_value=0, max_value=100000, value=29100)
+        })
+            
+    total_poblacion = sum(arquetipos_ciudad.values())
+    porcentaje = total_poblacion / 250000 * 100
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.progress(int(porcentaje)/100)
+    
+    st.markdown(f"""
+    <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+    <p style="margin:0;font-size:14px;">ℹ️ Estos arquetipos representan <strong>{total_poblacion:,} habitantes</strong> 
+    ({porcentaje:.1f}%) de la población base de 250,000 habitantes.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    base_social = 40000
+    porcentaje_bs = base_social / 250000 * 100
+    porcentaje_sc = base_social / total_poblacion * 100
+    st.markdown(f"""
+    <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+    <p style="margin:0;font-size:14px;">ℹ️ Base social inicial de 40,000 habitantes. </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+
+
+    # Configuración de participación
+    st.subheader("Configuración de participación por arquetipo")
+    
+    # Sliders individuales para cada arquetipo
+    participacion_arquetipos = {
+        "Usuario casual (joven adulto)": st.slider("% Usuario casuales activos: ", 1, 100, 15),
+        "Adulto profesional soltero": st.slider("% Profesionales solteros activos", 1, 100, 15),
+        "Familia de clase media con dos hijos": st.slider("% Familias activas", 1, 100, 15),
+        "Pareja de jubilados": st.slider("% Jubilados activos", 1, 100, 15)
+    }
+
+    # Calculamos el número de usuarios por arquetipo.
+    usuarios_casual = arquetipos_ciudad["Usuario casual (joven adulto)"] * participacion_arquetipos["Usuario casual (joven adulto)"] / 100
+    adultos_profesionales = arquetipos_ciudad["Adulto profesional soltero"] * participacion_arquetipos["Adulto profesional soltero"] / 100
+    familias = arquetipos_ciudad["Familia de clase media con dos hijos"] * participacion_arquetipos["Familia de clase media con dos hijos"] / 100
+    jubilados = arquetipos_ciudad["Pareja de jubilados"] * participacion_arquetipos["Pareja de jubilados"] / 100
+    total_participacion = usuarios_casual + adultos_profesionales + familias + jubilados
+    
+
+    st.progress(int(total_participacion)/total_poblacion)
+
+    st.markdown(f"""
+    <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+    <p style="margin:0;font-size:14px;">ℹ️ La selección suma un total de <strong>{total_participacion:,.0f} usuarios</strong>
+    </div>
+    """, unsafe_allow_html=True)
+
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    # Estimación de cuántos nuevos usuarios deberiamos captar al mes en 3 meses, 6 meses y 1 año para llegar a total_poblacion
+    #meses = [3, 6, 12]
+    #estimaciones = []
+    #for mes in meses:
+    #    nuevos_usuarios = (total_poblacion - total_participacion) / mes
+    #    estimaciones.append(nuevos_usuarios)
+    #    st.markdown(f"""
+    #    <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+    #    <p style="margin:0;font-size:14px;">ℹ️ Para alcanzar la población total de 250,000 habitantes,
+    #    deberíamos captar <strong>{nuevos_usuarios:,.0f} nuevos usuarios</strong> al mes durante {mes} meses.</p>
+    #    </div>
+    #    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+
+    
+    # Slider para participación de merchans (agrupados, avg)
+    participacion_merchants = st.slider("% Merchants activos", 1, 100, 5)
+
+    # Cálculo de beneficios usando gastos de arquetipos
+    st.subheader("Estimación")
+
+
+    users_por_arquetipo = {
+        k: arquetipos_ciudad[k] * v / 100 
+        for k, v in participacion_arquetipos.items()
+    }
+    total_users = sum(users_por_arquetipo.values())
+    
+    # Obtener gastos por categoría de cada arquetipo
+    gastos_por_arquetipo = st.session_state.valores_actuales
+    
+    
+    # Calcular cashback total
+    cashback_total = 0
+    detalle_cashback = []
+
+    for arquetipo, num_users in users_por_arquetipo.items():
+        if arquetipo in ARQUETIPOS_ORIGINALES:
+            for _, comision_row in base_df.iterrows():
+                categoria_pest1 = comision_row["Categoría"]
+                if categoria_pest1 and categoria_pest1 in gastos_por_arquetipo:
+                    gasto_min, gasto_max = gastos_por_arquetipo[categoria_pest1]
+                    gasto_promedio = (gasto_min + gasto_max) / 2
+                    comision = comision_row["Porc. base (%)"] / 100
+
+                    cashback_arquetipo = num_users * gasto_promedio * comision
+                    cashback_total += cashback_arquetipo
+
+                    detalle_cashback.append({
+                        "Arquetipo": arquetipo,
+                        "Categoría": comision_row["Categoría"],
+                        "Usuarios": num_users,
+                        "Gasto Promedio": f"{gasto_promedio:,.2f}€",
+                        "Comisión (%)": f"{comision_row['Total (%)']:.2f}%",
+                        "Cashback": f"{cashback_arquetipo:,.2f}€"
+                    })
+    
+    
+    # Calcular cashback total, según participación de merchants
+    cashback_total *= participacion_merchants / 100
+    
+    # Mostrar resultados
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Total usuarios potenciales", f"{total_users:,.0f}")
+        
+    with col2:
+        st.metric("Cashback mensual estimado", f"{cashback_total:,.2f}€")
+        
+    with col3:
+        st.metric("Cashback anual estimado", f"{cashback_total * 12:,.2f}€")
+    
+
+    # Create a DataFrame for the bar chart
+    df_cashback = pd.DataFrame({
+        "Parte": ["Entidad", "Usuario", "Proveedores"],
+        "Cashback": [cashback_total * entidad_weight / total_weight,
+                        cashback_total * user_weight / total_weight,
+                        cashback_total * proveedores_weight / total_weight,
+                        ]
+    })
+    fig_cashback = px.bar(
+        df_cashback,
+        x="Parte",
+        y="Cashback",
+        title="Distribución de Cashback por Parte",
+        text_auto=".2f",
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+
+    fig_cashback.update_layout(xaxis_title="Parte", yaxis_title="Cashback (€)")
+    st.plotly_chart(fig_cashback, use_container_width=True)
+
+
+    # Mostrar tabla detallada
+    st.markdown("### Detalle completo de cálculos")
+    st.dataframe(
+        pd.DataFrame(detalle_cashback).drop(columns=["Cashback_num"], errors="ignore"),
+        height=400,
+        use_container_width=True
+    )
+
+    # After calculating cashback_total, store it in session_state
+    st.session_state.cashback_total = cashback_total
+    st.session_state.detalle_cashback = detalle_cashback
