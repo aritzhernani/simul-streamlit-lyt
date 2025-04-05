@@ -1,9 +1,9 @@
 # Importación de librerías
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+#import plotly.express as px
+#import plotly.graph_objects as go
+#from plotly.subplots import make_subplots
 import numpy as np
 
 # Configuración de la aplicación
@@ -404,17 +404,17 @@ with tab3:
                         cashback_total * proveedores_weight / total_weight,
                         ]
     })
-    fig_cashback = px.bar(
-        df_cashback,
-        x="Parte",
-        y="Cashback",
-        title="Distribución de Cashback por Parte",
-        text_auto=".2f",
-        color_discrete_sequence=px.colors.qualitative.Pastel
-    )
+    #fig_cashback = px.bar(
+    #    df_cashback,
+    #    x="Parte",
+    #    y="Cashback",
+    #    title="Distribución de Cashback por Parte",
+    #    text_auto=".2f",
+    #    color_discrete_sequence=px.colors.qualitative.Pastel
+    #)
 
-    fig_cashback.update_layout(xaxis_title="Parte", yaxis_title="Cashback (€)")
-    st.plotly_chart(fig_cashback, use_container_width=True)
+    #fig_cashback.update_layout(xaxis_title="Parte", yaxis_title="Cashback (€)")
+    #st.plotly_chart(fig_cashback, use_container_width=True)
 
 
     # Mostrar tabla detallada
