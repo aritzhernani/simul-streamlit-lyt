@@ -1,7 +1,7 @@
 # Importación de librerías
 import streamlit as st
 import pandas as pd
-#import plotly.express as px
+import plotly.express as px
 #import plotly.graph_objects as go
 #from plotly.subplots import make_subplots
 import numpy as np
@@ -33,7 +33,9 @@ with tab1:
         "Educación (colegios, actividades)": (0, 1000),
         "Deporte y bienestar (gimnasio, clubs)": (0, 300),
         "Tecnología y telecomunicaciones": (0, 300),
-        "Otros bienes y servicios": (0, 300)
+        "Otros bienes y servicios": (0, 300),
+        "Abono (deportivo)": (0, 100),
+        "Merchandising y compras esporádicas": (0, 100)
     }
 
     # Valores mínimos y máximos por arquetipo
@@ -48,7 +50,9 @@ with tab1:
             "Educación (colegios, actividades)": (0, 0),
             "Deporte y bienestar (gimnasio, clubs)": (25, 60),
             "Tecnología y telecomunicaciones": (10, 30),
-            "Otros bienes y servicios": (20, 80)
+            "Otros bienes y servicios": (20, 80),
+            "Abono (deportivo)": (0, 0),
+            "Merchandising y compras esporádicas": (0, 0)
         },
         "Adulto profesional soltero": {
             "Vivienda, agua, electricidad, gas": (600, 800),
@@ -60,7 +64,9 @@ with tab1:
             "Educación (colegios, actividades)": (0, 0),
             "Deporte y bienestar (gimnasio, clubs)": (30, 60),
             "Tecnología y telecomunicaciones": (20, 40),
-            "Otros bienes y servicios": (50, 100)
+            "Otros bienes y servicios": (50, 100),
+            "Abono (deportivo)": (0, 80),
+            "Merchandising y compras esporádicas": (0, 20)
         },
         "Familia de clase media con dos hijos": {
             "Vivienda, agua, electricidad, gas": (800, 1000),
@@ -72,7 +78,9 @@ with tab1:
             "Educación (colegios, actividades)": (300, 400),
             "Deporte y bienestar (gimnasio, clubs)": (50, 100),
             "Tecnología y telecomunicaciones": (30, 60),
-            "Otros bienes y servicios": (50, 150)
+            "Otros bienes y servicios": (50, 150),
+            "Abono (deportivo)": (0, 0),
+            "Merchandising y compras esporádicas": (0, 20),
         },
         "Pareja de jubilados": {
             "Vivienda, agua, electricidad, gas": (600, 800),
@@ -84,7 +92,9 @@ with tab1:
             "Educación (colegios, actividades)": (0, 0),
             "Deporte y bienestar (gimnasio, clubs)": (25, 50),
             "Tecnología y telecomunicaciones": (20, 40),
-            "Otros bienes y servicios": (50, 150)
+            "Otros bienes y servicios": (50, 150),
+            "Abono (deportivo)": (0, 0),
+            "Merchandising y compras esporádicas": (0, 20)
         }
     }
 
@@ -162,11 +172,11 @@ with tab2:
         col1, col2, col3 = st.columns(3)
 
         if 'entidad_weight' not in st.session_state:
-            st.session_state['entidad_weight'] = 1/3
+            st.session_state['entidad_weight'] = 0.1
         if 'user_weight' not in st.session_state:
-            st.session_state['user_weight'] = 1/3
+            st.session_state['user_weight'] = 0.6
         if 'proveedores_weight' not in st.session_state:
-            st.session_state['proveedores_weight'] = 1/3
+            st.session_state['proveedores_weight'] = 0.3
 
         with col1:
             entidad_weight = st.slider("Entidad", 0.0, 1.0, st.session_state['entidad_weight'], step=0.01)
@@ -186,12 +196,12 @@ with tab2:
                 st.session_state['user_weight'] = user_weight
                 st.session_state['proveedores_weight'] = proveedores_weight
 
-        # Add a button for resetting to default values: 1/3, 1/3, 1/3
+        # Add a button for resetting to default values
         if st.button("Restablecer valores por defecto"):
             # Reset to default values
-            st.session_state['entidad_weight'] = 1/3
-            st.session_state['user_weight'] = 1/3
-            st.session_state['proveedores_weight'] = 1/3
+            st.session_state['entidad_weight'] = 0.1
+            st.session_state['user_weight'] = 0.6
+            st.session_state['proveedores_weight'] = 0.3
 
 
 
@@ -242,9 +252,8 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
-    # Pintame una barra horizontal stacked con la distribución de los porcentajes de: entidad, usuario y proveedores.
-
-
+    
+    
 #### Análisis de beneficios
 with tab3:
     st.subheader("Distribución de población por arquetipos")
@@ -341,6 +350,8 @@ with tab3:
     participacion_merchants = st.slider("% Merchants activos", 1, 100, 5)
 
     # Cálculo de beneficios usando gastos de arquetipos
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     st.subheader("Estimación")
 
 
@@ -348,10 +359,17 @@ with tab3:
         k: arquetipos_ciudad[k] * v / 100 
         for k, v in participacion_arquetipos.items()
     }
+    st.write(f"Usuarios por arquetipo: {users_por_arquetipo}")
     total_users = sum(users_por_arquetipo.values())
     
     # Obtener gastos por categoría de cada arquetipo
-    gastos_por_arquetipo = st.session_state.valores_actuales
+    gastos_por_arquetipo = {
+        arquetipo: {
+            categoria: (min_val, max_val)
+            for categoria, (min_val, max_val) in ARQUETIPOS_ORIGINALES[arquetipo].items()
+        }
+        for arquetipo in ARQUETIPOS_ORIGINALES
+    }
     
     
     # Calcular cashback total
@@ -362,11 +380,10 @@ with tab3:
         if arquetipo in ARQUETIPOS_ORIGINALES:
             for _, comision_row in base_df.iterrows():
                 categoria_pest1 = comision_row["Categoría"]
-                if categoria_pest1 and categoria_pest1 in gastos_por_arquetipo:
-                    gasto_min, gasto_max = gastos_por_arquetipo[categoria_pest1]
+                if categoria_pest1 and categoria_pest1 in gastos_por_arquetipo[arquetipo]:
+                    gasto_min, gasto_max = gastos_por_arquetipo[arquetipo][categoria_pest1]
                     gasto_promedio = (gasto_min + gasto_max) / 2
                     comision = comision_row["Porc. base (%)"] / 100
-
                     cashback_arquetipo = num_users * gasto_promedio * comision
                     cashback_total += cashback_arquetipo
 
@@ -375,13 +392,30 @@ with tab3:
                         "Categoría": comision_row["Categoría"],
                         "Usuarios": num_users,
                         "Gasto Promedio": f"{gasto_promedio:,.2f}€",
-                        "Comisión (%)": f"{comision_row['Total (%)']:.2f}%",
-                        "Cashback": f"{cashback_arquetipo:,.2f}€"
+                        "Participación merchants (%)": f"{participacion_merchants:.2f}%",
+                        "Comisión Total (%)": f"{comision_row['Porc. base (%)']:.2f}%",
+                        "Comisión Entidad (%)": f"{entidad_weight * 100:.2f}%",
+                        "Comisión Proveedores (%)": f"{proveedores_weight * 100:.2f}%",
+                        "Comisión Usuarios (%)": f"{user_weight * 100:.2f}%",
+                        "Comisión Total (€)": f"{cashback_arquetipo * participacion_merchants / 100 * total_weight:,.2f}€",
+                        "Comisión Entidad (€)": f"{cashback_arquetipo * participacion_merchants / 100 * entidad_weight:,.2f}€",
+                        "Comisión Proveedores (€)": f"{cashback_arquetipo * participacion_merchants / 100 * proveedores_weight:,.2f}€",
+                        "Cashback Usuarios (€)": f"{cashback_arquetipo * participacion_merchants / 100 * user_weight:,.2f}€",
+                        "Cashback total (€)": f"{cashback_arquetipo * participacion_merchants / 100:,.2f}€"
                     })
+
+    st.dataframe(pd.DataFrame(detalle_cashback), use_container_width=True)
     
+    # Get cashback mensual por arquetipo
+    df_cashback_arquetipo = pd.DataFrame(detalle_cashback)
+    df_cashback_arquetipo = df_cashback_arquetipo.groupby("Arquetipo").agg({"Cashback Usuarios (€)": lambda x: sum(float(i.replace("€", "").replace(",", "")) for i in x)}).reset_index()
+    df_cashback_arquetipo["Usuarios"] = df_cashback_arquetipo["Arquetipo"].map(users_por_arquetipo)
+    df_cashback_arquetipo['avg'] = df_cashback_arquetipo["Cashback Usuarios (€)"] / df_cashback_arquetipo["Usuarios"]
     
-    # Calcular cashback total, según participación de merchants
-    cashback_total *= participacion_merchants / 100
+    # Calcular cashback total de usuarios, según participación de merchants
+    # sum all rows for Cashback Usuarios (€)
+    cashback_total_usuarios = df_cashback_arquetipo["Cashback Usuarios (€)"].sum()
+    cashback_total = cashback_total * participacion_merchants / 100
     
     # Mostrar resultados
     col1, col2, col3 = st.columns(3)
@@ -390,40 +424,80 @@ with tab3:
         st.metric("Total usuarios potenciales", f"{total_users:,.0f}")
         
     with col2:
-        st.metric("Cashback mensual estimado", f"{cashback_total:,.2f}€")
+        st.metric("Cashback mensual estimado", f"{cashback_total_usuarios:,.2f}€")
         
     with col3:
-        st.metric("Cashback anual estimado", f"{cashback_total * 12:,.2f}€")
+        st.metric("Cashback anual estimado", f"{cashback_total_usuarios * 12:,.2f}€")
+
+    avg_user = cashback_total_usuarios / total_users if total_users > 0 else 0
+    st.markdown(f"""
+    <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+    <p style="margin:0;font-size:14px;">ℹ️ El cashback mensual por usuario es de <strong>{avg_user:,.2f}€</strong></p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+
+
+    st.dataframe(df_cashback_arquetipo, use_container_width=True)
+
+    # Para comprar una camiseta cuántos meses tardaríamos? Y una entrada? Cada uno de los arquetipos
+    precio_camiseta = 80
+    precio_entrada = 30 # Hasta 80-90 euros
+
+    # Print cashback mensual estimado por arquetipo
+    for index, row in df_cashback_arquetipo.iterrows():
+        arquetipo = row["Arquetipo"]
+        st.write(f"Arquetipo: {arquetipo}")
+        cashback_arquetipo = row["Cashback Usuarios (€)"]
+
+
+
+        cashback_arquetipo_avg = cashback_arquetipo / num_users if num_users > 0 else 0
+
+        st.write(f"Cashback mensual estimado por usuario: {cashback_arquetipo_avg:.2f}€")
+        meses_camiseta = precio_camiseta / cashback_arquetipo_avg
+        meses_entrada = precio_entrada / cashback_arquetipo_avg
+        st.markdown(f"""
+        <div style="background-color:#f0f2f6;padding:10px;border-radius:5px;">
+        <p style="margin:0;font-size:14px;">Usuario <strong>{arquetipo}</strong>:</p>
+        <p style="margin:0;font-size:14px;">— Para comprar una camiseta de <strong>{precio_camiseta}€</strong>
+        necesitarías <strong>{meses_camiseta:.1f} meses</strong> de cashback.</p>
+        <p style="margin:0;font-size:14px;">— Para comprar una entrada de <strong>{precio_entrada}€</strong>
+        necesitarías <strong>{meses_entrada:.1f} meses</strong> de cashback.</p>
+        </div>
+        """, unsafe_allow_html=True)
     
 
-    # Create a DataFrame for the bar chart
-    df_cashback = pd.DataFrame({
-        "Parte": ["Entidad", "Usuario", "Proveedores"],
-        "Cashback": [cashback_total * entidad_weight / total_weight,
-                        cashback_total * user_weight / total_weight,
-                        cashback_total * proveedores_weight / total_weight,
-                        ]
+
+
+    
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Get the distribution of cashback per user type: entidad, user, providers
+    # Create a DataFrame for the distribution
+    df_distribution = pd.DataFrame({
+        "Tipo": ["Entidad", "Proveedores", "Usuarios"],
+        "Distribución (%)": [entidad_weight * 100, proveedores_weight * 100, user_weight * 100]
     })
-    #fig_cashback = px.bar(
-    #    df_cashback,
-    #    x="Parte",
-    #    y="Cashback",
-    #    title="Distribución de Cashback por Parte",
-    #    text_auto=".2f",
-    #    color_discrete_sequence=px.colors.qualitative.Pastel
-    #)
+    df_distribution["Distribución mensual (€)"] = df_distribution["Distribución (%)"] / 100 * cashback_total
+    df_distribution["Distribución anual (€)"] = df_distribution["Distribución mensual (€)"] * 12
+    st.dataframe(df_distribution, use_container_width=True)
+    fig = px.pie(df_distribution, values='Distribución anual (€)', names='Tipo', title='',
+                 color_discrete_sequence=px.colors.sequential.RdBu)
+    fig.update_traces(textposition='inside')
+    fig.update_traces(textinfo='label')
+    fig.update_traces(textfont_size=14)
+    fig.update_layout(showlegend=True)
+    fig.update_traces(marker=dict(colors=['#1f77b4', '#7f7f7f', '#d9d9d9']))
+    st.plotly_chart(fig, use_container_width=True)
 
-    #fig_cashback.update_layout(xaxis_title="Parte", yaxis_title="Cashback (€)")
-    #st.plotly_chart(fig_cashback, use_container_width=True)
 
 
-    # Mostrar tabla detallada
-    st.markdown("### Detalle completo de cálculos")
-    st.dataframe(
-        pd.DataFrame(detalle_cashback).drop(columns=["Cashback_num"], errors="ignore"),
-        height=400,
-        use_container_width=True
-    )
+
+
 
     # After calculating cashback_total, store it in session_state
     st.session_state.cashback_total = cashback_total
