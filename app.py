@@ -5,6 +5,8 @@ import plotly.express as px
 #import plotly.graph_objects as go
 #from plotly.subplots import make_subplots
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Configuración de la aplicación
 st.set_page_config(page_title='Simulación', layout='centered', initial_sidebar_state='collapsed')
@@ -359,7 +361,6 @@ with tab3:
         k: arquetipos_ciudad[k] * v / 100 
         for k, v in participacion_arquetipos.items()
     }
-    st.write(f"Usuarios por arquetipo: {users_por_arquetipo}")
     total_users = sum(users_por_arquetipo.values())
     
     # Obtener gastos por categoría de cada arquetipo
@@ -404,13 +405,13 @@ with tab3:
                         "Cashback total (€)": f"{cashback_arquetipo * participacion_merchants / 100:,.2f}€"
                     })
 
-    st.dataframe(pd.DataFrame(detalle_cashback), use_container_width=True)
+    #st.dataframe(pd.DataFrame(detalle_cashback), use_container_width=True)
     
     # Get cashback mensual por arquetipo
     df_cashback_arquetipo = pd.DataFrame(detalle_cashback)
     df_cashback_arquetipo = df_cashback_arquetipo.groupby("Arquetipo").agg({"Cashback Usuarios (€)": lambda x: sum(float(i.replace("€", "").replace(",", "")) for i in x)}).reset_index()
     df_cashback_arquetipo["Usuarios"] = df_cashback_arquetipo["Arquetipo"].map(users_por_arquetipo)
-    df_cashback_arquetipo['avg'] = df_cashback_arquetipo["Cashback Usuarios (€)"] / df_cashback_arquetipo["Usuarios"]
+    df_cashback_arquetipo['Avg'] = df_cashback_arquetipo["Cashback Usuarios (€)"] / df_cashback_arquetipo["Usuarios"]
     
     # Calcular cashback total de usuarios, según participación de merchants
     # sum all rows for Cashback Usuarios (€)
@@ -493,11 +494,6 @@ with tab3:
     fig.update_layout(showlegend=True)
     fig.update_traces(marker=dict(colors=['#1f77b4', '#7f7f7f', '#d9d9d9']))
     st.plotly_chart(fig, use_container_width=True)
-
-
-
-
-
 
     # After calculating cashback_total, store it in session_state
     st.session_state.cashback_total = cashback_total
