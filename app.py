@@ -205,17 +205,17 @@ with tab1:
 
         # Ahora, solo asigna nuevos_valores a session_state después de llenarlo
         st.session_state.valores_actuales = nuevos_valores
-        
-    # Botones de acción
-    if st.button("Guardar cambios"):
-        st.session_state.valores_modificados[arquetipo] = nuevos_valores
-        st.info("Cambios guardados para este arquetipo!")
 
-    if st.button("Restablecer original"):
-        st.session_state.valores_actuales = ARQUETIPOS_ORIGINALES[arquetipo].copy()
-        if arquetipo in st.session_state.valores_modificados:
-            del st.session_state.valores_modificados[arquetipo]
-        st.rerun()
+        # Botones de acción
+        if st.button("Guardar cambios"):
+            st.session_state.valores_modificados[arquetipo] = nuevos_valores
+            st.info("Cambios guardados para este arquetipo!")
+
+        if st.button("Restablecer original"):
+            st.session_state.valores_actuales = ARQUETIPOS_ORIGINALES[arquetipo].copy()
+            if arquetipo in st.session_state.valores_modificados:
+                del st.session_state.valores_modificados[arquetipo]
+            st.rerun()
 
 #### Cálculo de porcentajes
 with tab2:
