@@ -164,7 +164,7 @@ with tab1:
         #)
 
     if arquetipo:
-        nuevos_valores = {}
+        nuevos_valores = {}  # Inicialización de la variable fuera de cualquier condicional
         categorias = list(CATEGORIAS_RANGO.items())
 
         for i in range(0, len(categorias), 2):
@@ -202,9 +202,10 @@ with tab1:
                         format="%d",
                         key=f"input_{arquetipo}_{categoria2}_{i}_col2"
                     )
-                        
-        st.session_state.valores_actuales = nuevos_valores
 
+        # Ahora, solo asigna nuevos_valores a session_state después de llenarlo
+        st.session_state.valores_actuales = nuevos_valores
+        
     # Botones de acción
     if st.button("Guardar cambios"):
         st.session_state.valores_modificados[arquetipo] = nuevos_valores
