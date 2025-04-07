@@ -203,8 +203,6 @@ with tab1:
                         key=f"input_{arquetipo}_{categoria2}_{i}_col2"
                     )
                         
-    st.session_state.valores_actuales = nuevos_valores
-
     # Botones de acción
     if st.button("Guardar cambios"):
         st.session_state.valores_modificados[arquetipo] = nuevos_valores
