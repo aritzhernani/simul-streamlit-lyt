@@ -1,6 +1,6 @@
 [theme]
-base = "light"  # or "dark"
-primaryColor = "#87a2fd"
-secondaryBackgroundColor = "#f7f7f7"
-textColor = "#31333f"  # optional (default: black in light mode)
-font = "sans serif"    # optional (default)
+base = "dark"
+primaryColor = "#f5c542"  # a warm professional yellow
+secondaryBackgroundColor = "#1e1e2f"  # dark muted background
+textColor = "#f0f0f0"  # light text for readability
+font = "sans serif"  # clean professional font
